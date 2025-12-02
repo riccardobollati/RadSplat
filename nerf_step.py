@@ -68,6 +68,22 @@ def create_parser():
         help="name of the colors init strategy: nerf | image"
     )
 
+    parser.add_argument(
+        "--opacity-init",
+        "-op",
+        type=str,
+        required=False,
+        help="strategy to sample opacity: none | nerf"
+    )
+
+    parser.add_argument(
+        "--sample-size-for-opacity",
+        "-nop",
+        type=int,
+        required=False,
+        help="number of points to use to sample opacity (int)"
+    )
+
     return parser
 
 def rel_to_images_root(p: str) -> str:
@@ -112,6 +128,7 @@ if __name__ == "__main__":
 
 
     # if we want to use the images pixels to initalize the colors we sort the array before
+    # this way the image will be loaded only once per batch
     if args.colors_init == 'image':
         coords = coords[coords[:, 0].argsort()]
         img_loaded_idx = 0
@@ -143,7 +160,12 @@ if __name__ == "__main__":
         trasmittance = gs_initializer.compute_transmittance()
 
         logging.info('computer initial_position')
-        initial_position = gs_initializer.compute_inital_positions(trasmittance, 0.5)
+        initial_position, depths = gs_initializer.compute_inital_positions(trasmittance, 0.5)
+
+        print(depths)
+
+        if args.opacity_init == 'nerf':
+            
 
         if args.colors_init == 'image':
             batch_colors = []
