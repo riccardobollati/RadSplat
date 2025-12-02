@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=01:20:00
+#SBATCH --time=01:40:00
 #SBATCH --account=dslab_jobs
 #SBATCH --job-name=nerf-train
 #SBATCH -o logs/nerf_%j.out
@@ -10,7 +10,9 @@
 # FULL pipeline to run nerfacto and sample points 
 ###############################################################
 
-scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
+# scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
+scenes="treehill"
+# scenes="bicycle"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
 export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
@@ -31,16 +33,21 @@ for scenename in $scenes;do
 
   ## Folders and output names
   export EXPERIMENT_NAME="$(date '+%Y%m%d_%H%M%S')_${SCENE}"
-  export EXPERIMENT_DIR="${RUNNING_DIR}/experiments/${EXPERIMENT_NAME}"
+  export EXPERIMENT_DIR="${RUNNING_DIR}/experiments_test/${EXPERIMENT_NAME}"
   export DATA_DIR="${BASE_DATA_DIR}/${SCENE}"
   export NERF_MODEL="${EXPERIMENT_DIR}/outputs/${EXPERIMENT_NAME}/nerfacto/${EXPERIMENT_NAME}/config.yml"
   export POSITION_TENSOR_OUTPUT_NAME="${EXPERIMENT_DIR}/ray_sample.pt"
 
   ## Radsplat paramaters
+  # (d) mixer-sobel 0.8 2500 1M
+  # (d) mixer-sobel 0.6 2500 1M
+  # (d) mixer-canny 0.8 2500 1M
+  # mixer-canny 0.6 2500 1M
   export RAY_SAMPLING_STRATEGY="random"
-  export PERCENTAGE_RANDOM=0.8
-  export NERF_MAX_NUM_ITERATIONS=500
+  export PERCENTAGE_RANDOM=0.6
+  export NERF_MAX_NUM_ITERATIONS=2500
   export SAMPLING_SIZE=1000000
+  export COLORS_INIT="image"
 
   echo "##################### [Job started] #####################"
   mkdir "${EXPERIMENT_DIR}"
@@ -65,7 +72,7 @@ for scenename in $scenes;do
   echo "[nerfacto-end] - $(($(date +%s%N)/1000000))" >> time_logs.txt
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] finished"
 
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [sampling-rays] finished"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [sampling-rays] started"
   echo "[ray-sampling-start] - $(($(date +%s%N)/1000000))" >> time_logs.txt
 
   python ~/ds-lab/RadSplat/nerf_step.py \
@@ -73,7 +80,8 @@ for scenename in $scenes;do
     --output-name $POSITION_TENSOR_OUTPUT_NAME \
     --sampling-size $SAMPLING_SIZE \
     --ray-sampling-strategy $RAY_SAMPLING_STRATEGY \
-    --percentage-random $PERCENTAGE_RANDOM
+    --percentage-random $PERCENTAGE_RANDOM \
+    --colors-init $COLORS_INIT
 
   echo "[ray-sampling-end] - $(($(date +%s%N)/1000000))" >> time_logs.txt
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] [sampling-rays] finished"
@@ -134,6 +142,7 @@ for scenename in $scenes;do
     --num-rays $SAMPLING_SIZE \
     --sampling-strategy $RAY_SAMPLING_STRATEGY \
     --experiment-name $EXPERIMENT_NAME \
-    --percentage-random $PERCENTAGE_RANDOM
+    --percentage-random $PERCENTAGE_RANDOM \
+    --colors-init $COLORS_INIT
 
 done

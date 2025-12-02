@@ -63,6 +63,14 @@ def create_parser():
         help="percentage random for mixedsampling"
     )
 
+    parser.add_argument(
+        "--colors-init",
+        "-col",
+        type=str,
+        required=False,
+        help="name of the colors init strategy: nerf | image"
+    )
+
     return parser
 
 if __name__ == "__main__":
@@ -76,7 +84,8 @@ if __name__ == "__main__":
             "nerf-model" : args.nerf_model,
             "nerf-steps" : args.nerf_steps,
             "rays-sampled" : args.num_rays,
-            "sampling-strategy" : args.sampling_strategy
+            "sampling-strategy" : args.sampling_strategy,
+            "colors-init" : args.colors_init
         }
 
     if args.sampling_strategy in ["mixed-sobel", "mixed-canny"]:

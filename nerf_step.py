@@ -2,6 +2,7 @@ import warnings
 import math
 import torch
 import logging
+import numpy as np
 
 from nerf_models import Nerfacto
 from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler, mixed_sampler
@@ -59,6 +60,14 @@ def create_parser():
         help="name odf the filter to use: canny | sobel | mixed-sobel | mixed-canny"
     )
 
+    parser.add_argument(
+        "--colors-init",
+        "-col",
+        type=str,
+        required=False,
+        help="name of the colors init strategy: nerf | image"
+    )
+
     return parser
 
 def rel_to_images_root(p: str) -> str:
@@ -85,6 +94,7 @@ if __name__ == "__main__":
     model = Nerfacto(folder)
     cams = model.pipeline.datamanager.train_dataset.cameras.to('cpu')
     dpo = model.pipeline.datamanager.train_dataparser_outputs
+    dataset = model.pipeline.datamanager.train_dataset 
 
     # saple points
 
@@ -100,6 +110,12 @@ if __name__ == "__main__":
         coords = random_sampler(model.pipeline.datamanager, N_RAYS, model.device)
 
 
+
+    # if we want to use the images pixels to initalize the colors we sort the array before
+    if args.colors_init == 'image':
+        coords = coords[coords[:, 0].argsort()]
+        img_loaded_idx = 0
+        img_loaded = dataset.get_numpy_image(0)
 
     xyzrgb_chunks = []
     for b in range(n_batches):
@@ -129,10 +145,22 @@ if __name__ == "__main__":
         logging.info('computer initial_position')
         initial_position = gs_initializer.compute_inital_positions(trasmittance, 0.5)
 
-        xyzrgb_batch = torch.cat([initial_position, outputs['rgb']], dim=-1)
+        if args.colors_init == 'image':
+            batch_colors = []
+            for i in batch_rays_indexes:
+                if i[0] != img_loaded_idx:
+                    img_loaded = dataset.get_numpy_image(i[0])
+                    img_loaded_idx = i[0]
 
+                batch_colors.append(img_loaded[i[1],i[2]])
+
+            batch_array = np.array(batch_colors, dtype=np.float32)
+            rgb_values = torch.from_numpy(batch_array).to(model.device) / 255
+        else:
+            rgb_values = outputs['rgb']
+
+        xyzrgb_batch = torch.cat([initial_position, rgb_values], dim=-1)
         xyzrgb_chunks.append(xyzrgb_batch.detach().cpu())
-
 
     xyzrgb = torch.cat(xyzrgb_chunks, dim=0)
 
