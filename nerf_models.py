@@ -21,6 +21,7 @@ from nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampl
 from nerfstudio.field_components.field_heads import FieldHeadNames
 from nerfstudio.utils.eval_utils import eval_setup
 from nerfstudio.model_components.ray_generators import RayGenerator
+from nerfstudio.model_components.ray_samplers import ProposalNetworkSampler, UniformSampler
 
 warnings.filterwarnings(
     "ignore",
@@ -36,16 +37,18 @@ class Nerfacto:
         :Param config_file_path -> (str) path to the config file
         """
 
-        logging.info("Model interface initialization")
+        print("[Nerfacto] __init__ started", flush=True)
 
         self.config_file_path = Path(config_file_path)
 
         # load model and pipeline
+        print("[Nerfacto] calling eval_setup", flush=True)
         self.pipeline, self.model = self._load_model()
         # set device based on configs (GPU / CPU)
         self.device = next(self.model.parameters()).device
 
-        logging.info(f"Model interface initialized succesfully - device: {self.device}")
+        print("[Nerfacto] model/device ready", self.device, flush=True)
+
 
         pass
 
@@ -128,6 +131,20 @@ class Nerfacto:
         # sampled = sampler.generate_ray_samples(rays, num_samples)
 
         ray_samples, weights_list, ray_samples_list = self.model.proposal_sampler(rays, density_fns=self.model.density_fns)
+
+        return ray_samples.to(self.device)
+    
+    def sample_points_uniform(self, rays: RayBundle, num_samples: int = 250, max_dist: float = 3.0):
+        rays = rays.to(self.device)
+
+        # linspace in *euclidean* depth
+        bins = torch.linspace(0.0, max_dist, num_samples + 1, device=self.device)[None, :]  # [1, N+1]
+        euclidean_bins = bins.expand(rays.origins.shape[0], -1)  # [num_rays, N+1]
+
+        ray_samples = rays.get_ray_samples(
+            bin_starts=euclidean_bins[..., :-1, None],
+            bin_ends=euclidean_bins[..., 1:, None],
+        )
 
         return ray_samples.to(self.device)
 

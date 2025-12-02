@@ -10,9 +10,7 @@
 # FULL pipeline to run nerfacto and sample points 
 ###############################################################
 
-# scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
-scenes="treehill"
-# scenes="bicycle"
+scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
 export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
@@ -39,14 +37,11 @@ for scenename in $scenes;do
   export POSITION_TENSOR_OUTPUT_NAME="${EXPERIMENT_DIR}/ray_sample.pt"
 
   ## Radsplat paramaters
-  # (d) mixer-sobel 0.8 2500 1M
-  # (d) mixer-sobel 0.6 2500 1M
-  # (d) mixer-canny 0.8 2500 1M
-  # mixer-canny 0.6 2500 1M
   export RAY_SAMPLING_STRATEGY="random"
-  export PERCENTAGE_RANDOM=0.6
+  export PERCENTAGE_RANDOM=0.8
   export NERF_MAX_NUM_ITERATIONS=2500
   export SAMPLING_SIZE=1000000
+  export STEPS_GS=5000
   export COLORS_INIT="image"
 
   echo "##################### [Job started] #####################"
@@ -126,7 +121,8 @@ for scenename in $scenes;do
     --data-factor "$DATA_FACTOR" \
     --render-traj-path "$RENDER_TRAJ_PATH" \
     --data-dir "$DATA_DIR/" \
-    --result-dir "$EXPERIMENT_DIR/"
+    --result-dir "$EXPERIMENT_DIR/" \
+    --max-steps "$STEPS_GS"
 
   set +u
   conda deactivate

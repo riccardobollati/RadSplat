@@ -25,18 +25,18 @@ pip uninstall -y fused-ssim || true
 pip install --no-build-isolation --no-binary :all: --force-reinstall \
   git+https://github.com/rahul-goel/fused-ssim@328dc9836f513d00c4b5bc38fe30478b4435cbb5
 
-SCENE_DIR="/work/courses/dslab/team20/data/bicycle"
-RESULT_DIR="/work/courses/dslab/team20/results_gsplat"
+SCENE_DIR="/work/courses/dslab/team20/data/mipnerf360/counter"
+RESULT_DIR="/home/llazzaroni/ds-lab/RadSplat/density_rays/data"
 RENDER_TRAJ_PATH="ellipse"
 DATA_FACTOR=4
 
-REPO_DIR="/home/llazzaroni/RadSplat/submodules/gsplat"
-cd "$REPO_DIR"
-
-srun python examples/simple_trainer.py default \
-  --eval_steps -1 \
-  --disable_viewer \
-  --data_factor "$DATA_FACTOR" \
-  --render_traj_path "$RENDER_TRAJ_PATH" \
-  --data_dir "$SCENE_DIR/" \
-  --result_dir "$RESULT_DIR/"
+python ~/ds-lab/RadSplat/save_stats.py default \
+    --no-nerf-init \
+    --save-first-ckp \
+    --eval-steps -1 \
+    --disable-viewer \
+    --data-factor "$DATA_FACTOR" \
+    --render-traj-path "$RENDER_TRAJ_PATH" \
+    --data-dir "$SCENE_DIR/" \
+    --result-dir "$RESULT_DIR/" \
+    --ckpt "/home/llazzaroni/ds-lab/RadSplat/density_rays/data/gsplat_nerf/ckpts/ckpt_0_rank0.pt"

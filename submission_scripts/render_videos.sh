@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --time=02:30:00
-#SBATCH --account=dslab_jobs
+#SBATCH --time=01:00:00
+#SBATCH --account=dslab
 #SBATCH --job-name=nerf-train
-#SBATCH -o logs/nerf_%j.out
-#SBATCH -e logs/nerf_%j.er
+#SBATCH -o logs/video_%j.out
+#SBATCH -e logs/video_%j.er
 
 ###############################################################
 # DESCRIPTION: 
@@ -32,33 +32,29 @@ git+https://github.com/rahul-goel/fused-ssim@328dc9836f513d00c4b5bc38fe30478b443
 
 echo "------------------ ENVIRONMENT BUILT --------------------"
 
-scenes="bicycle flowers"
+RENDER_TRAJ_PATH="ellipse"
+DATA_FACTOR=4
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
 export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
+export EXPERIMENTS_ROOT="${RUNNING_DIR}/experiments"
 
-for scenename in $scenes;do
+for EXPERIMENT_DIR in "${EXPERIMENTS_ROOT}"/*; do
 
-  echo "---------------------- [Scene: ${scenename}] ----------------------"
+  echo "---------------------- [Experiment: ${EXPERIMENT_DIR}}] ----------------------"
 
-  export SCENE=$scenename
+  if [ -d "${EXPERIMENT_DIR}/videos" ]; then
+    echo "Skipping $(basename "$EXPERIMENT_DIR"): 'videos' folder already exists."
+    continue
+  fi
 
-  ## Folders and output names
-  export EXPERIMENT_NAME="$(date '+%Y%m%d_%H%M%S')_${SCENE}_SFM"
-  export EXPERIMENT_DIR="${RUNNING_DIR}/experiments/${EXPERIMENT_NAME}"
-  export DATA_DIR="${BASE_DATA_DIR}/${SCENE}"
-  export NERF_MODEL="${EXPERIMENT_DIR}/outputs/${EXPERIMENT_NAME}/nerfacto/${EXPERIMENT_NAME}/config.yml"
-  export STEPS_GS=30000
+  export DATA_DIR="${BASE_DATA_DIR}/bonsai"
+  export CKPT="${EXPERIMENT_DIR}/ckpts/ckpt_0_rank0.pt"
 
   echo "##################### [Job started] #####################"
-  mkdir "${EXPERIMENT_DIR}"
   cd "${EXPERIMENT_DIR}"
 
   echo "##################### [STARTING GSPLAT] #####################"
-
-
-  RENDER_TRAJ_PATH="ellipse"
-  DATA_FACTOR=4
 
   python ~/ds-lab/RadSplat/save_stats.py default \
     --no-nerf-init \
@@ -69,6 +65,6 @@ for scenename in $scenes;do
     --render-traj-path "$RENDER_TRAJ_PATH" \
     --data-dir "$DATA_DIR/" \
     --result-dir "$EXPERIMENT_DIR/" \
-    --max-steps "$STEPS_GS"
+    --ckpt "$CKPT"
 
 done

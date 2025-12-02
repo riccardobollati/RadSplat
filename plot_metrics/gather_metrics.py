@@ -34,5 +34,5 @@ for ind, i in enumerate(matches):
             shutil.copy(f"{FOLDER}/{i}/{name}",f"{folder_name}/{name}" )
     else:
         errors.append(i)
-
+        
 print(errors)
