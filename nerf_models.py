@@ -134,6 +134,33 @@ class Nerfacto:
 
         return ray_samples.to(self.device)
     
+    def sample_specific_points(self, rays : RayBundle, point_locations : torch.Tensor):
+        """
+        Sample n points from a ray bundle. The function expect a tensor with one entry
+        for each ray. The entry contains the position along the ray of the point we want
+        to sample
+
+        Params:
+            @rays(RayBundle) -> the ray bundle
+            @point_location  -> points coordinate along the ray [n_rays, n_sample_per_ray]
+
+        Returns RaySamples
+        """
+
+        # convert to the correct shape
+        bin_starts = point_locations
+        bin_ends   = point_locations + 1.e-3
+
+        ray_samples = rays.get_ray_samples(
+            bin_starts=bin_starts,
+            bin_ends=bin_ends,
+            spacing_starts=bin_starts,
+            spacing_ends=bin_ends,
+            spacing_to_euclidean_fn=lambda x: x,
+        )
+
+        return ray_samples
+    
     def sample_points_uniform(self, rays: RayBundle, num_samples: int = 250, max_dist: float = 3.0):
         rays = rays.to(self.device)
 
