@@ -74,6 +74,14 @@ def create_parser():
             type=str,
             required=False,
             help="strategy used to initialize opacity: none | nerf-n (where n is the number of points sampled to initialize the opacity)"
+            )
+
+    parser.add_argument(
+        "--sample-size-for-opacity",
+        "-nop",
+        type=int,
+        required=False,
+        help="number of points to use to sample opacity (int)"
     )
 
     return parser
@@ -118,6 +126,7 @@ if __name__ == "__main__":
         coords = random_sampler(model.pipeline.datamanager, N_RAYS, model.device)
 
     # if we want to use the images pixels to initalize the colors we sort the array before
+    # this way the image will be loaded only once per batch
     if args.colors_init == 'image':
         coords = coords[coords[:, 0].argsort()]
         img_loaded_idx = 0
@@ -149,13 +158,13 @@ if __name__ == "__main__":
         trasmittance = gs_initializer.compute_transmittance()
 
         logging.info('computer initial_position')
-        initial_position = gs_initializer.compute_inital_positions(trasmittance, 0.5)
-        print(initial_position)
+        initial_position, depths = gs_initializer.compute_inital_positions(trasmittance, 0.5)
 
-        # if args.initialize_opacity.strtswith('nerf'):
+        print(depths)
 
-
-
+        if args.opacity_init == 'nerf':
+            pass
+            
 
         if args.colors_init == 'image':
             batch_colors = []

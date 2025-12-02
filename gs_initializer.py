@@ -23,8 +23,25 @@ class Initializer:
         count = mask.sum(dim=1)
         last_idx = (count - 1).clamp(min=0)
 
+        depths = get_points_depth(self.ray_samples, last_idx)
+
         initial_gaussians_position = positions[torch.arange(len(positions), device=positions.device), last_idx, :]
 
-        return initial_gaussians_position
+        return initial_gaussians_position, depths
+
+def get_points_depth(ray_samples, indexes):
+    starts = ray_samples.frustums.starts
+    ends   = ray_samples.frustums.ends
+
+    R = starts.shape[0]
+    batch_ids = torch.arange(R, device=indexes.device)
+
+    start = starts[batch_ids, indexes, 0]
+    end   = ends[batch_ids, indexes, 0]
+    depth = 0.5 * (start + end)
+
+    return depth
+
+    return depth
 
 
