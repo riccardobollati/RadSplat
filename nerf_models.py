@@ -175,6 +175,10 @@ class Nerfacto:
 
         return ray_samples.to(self.device)
 
+    def get_density(self, ray_samples : RaySamples) -> torch.Tensor:
+        densities, _  = self.model.get_density(ray_samples)
+        return densities
+
     def evaluate_points(self, ray_samples : RaySamples):
         """
         Evaluate a RaySamples and returns the value of the pixel and the single points

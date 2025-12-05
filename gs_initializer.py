@@ -42,6 +42,19 @@ def get_points_depth(ray_samples, indexes):
 
     return depth
 
-    return depth
+def create_ray_bins_for_sampling(depths: torch.Tensor, n: int, delta=1.0e-3):
+    """
+    Generate multiple sample coordinates within centers ± delta
 
+    Params:
+        @depths:    -> center of the sampling bins
+        @n:         -> number of points to sample
+        @delta:     -> max sample ± deviation from sample
+    """
 
+    sample_depths = depths.unsqueeze(-1)
+    for _ in range(n):
+        deltas = delta * torch.randn(n, 1)
+        sample_depths.cat([sample_depths, sample_depths + deltas], dim=-1)
+
+    return sample_depths

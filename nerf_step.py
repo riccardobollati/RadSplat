@@ -6,7 +6,7 @@ import numpy as np
 
 from nerf_models import Nerfacto
 from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler, mixed_sampler
-from gs_initializer import Initializer
+from gs_initializer import Initializer, create_ray_bins_for_sampling
 from pathlib import Path
 import argparse
 
@@ -163,8 +163,13 @@ if __name__ == "__main__":
         print(depths)
 
         if args.opacity_init == 'nerf':
-            pass
-            
+
+
+            sample_coords = create_ray_bins_for_sampling(depths, 5)
+            sample_opacity_points = model.sample_specific_points(gs_initializer.ray_samples, sample_coords)
+            densities, _ = model.get_density(sample_opacity_points)
+            print('####### densities')
+            print(densities)
 
         if args.colors_init == 'image':
             batch_colors = []
