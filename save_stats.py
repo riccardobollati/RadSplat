@@ -279,11 +279,15 @@ def create_splats_with_optimizers(
     world_size: int = 1,
 ) -> Tuple[torch.nn.ParameterDict, Dict[str, torch.optim.Optimizer]]:
     
+    opacities_initialized = False
     if nerf_init:
         # num_points = len(torch.from_numpy(parser.points).float()
         payload = torch.load(cfg.pt_path, map_location="cuda")
 
         xyzrgb = payload["xyzrgb"].detach().cpu().numpy()
+        opacities = payload["opacity"].detach().cpu()
+        opacities = opacities.squeeze(1)
+        opacities_initialized = True
         num_points = len(xyzrgb)
         C_nerf_all = payload["camera_to_worlds"][:, :3, 3].detach().cpu().numpy()
 
@@ -349,11 +353,15 @@ def create_splats_with_optimizers(
     # Distribute the GSs to different ranks (also works for single rank)
     points = points[world_rank::world_size]
     rgbs = rgbs[world_rank::world_size]
+    # pipo
+    opacities = opacities[world_rank::world_size]
     scales = scales[world_rank::world_size]
 
     N = points.shape[0]
     quats = torch.rand((N, 4))  # [N, 4]
-    opacities = torch.logit(torch.full((N,), init_opacity))  # [N,]
+    if not opacities_initialized:
+        print('init opacities pipo')
+        opacities = torch.logit(torch.full((N,), init_opacity))  # [N,]
 
     params = [
         # name, value, lr

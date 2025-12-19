@@ -52,9 +52,11 @@ def create_ray_bins_for_sampling(depths: torch.Tensor, n: int, delta=1.0e-3):
         @delta:     -> max sample ± deviation from sample
     """
 
+    device = depths.device
+
     sample_depths = depths.unsqueeze(-1)
     for _ in range(n):
-        deltas = delta * torch.randn(n, 1)
-        sample_depths.cat([sample_depths, sample_depths + deltas], dim=-1)
+        deltas = delta * torch.randn(len(sample_depths), 1, device=device)
+        sample_depths = torch.cat([sample_depths, sample_depths + deltas], dim=-1)
 
     return sample_depths

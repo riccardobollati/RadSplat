@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=01:40:00
+#SBATCH --time=02:00:00
 #SBATCH --account=dslab_jobs
 #SBATCH --job-name=nerf-train
 #SBATCH -o logs/nerf_%j.out
@@ -76,7 +76,8 @@ for scenename in $scenes;do
     --sampling-size $SAMPLING_SIZE \
     --ray-sampling-strategy $RAY_SAMPLING_STRATEGY \
     --percentage-random $PERCENTAGE_RANDOM \
-    --colors-init $COLORS_INIT
+    --colors-init $COLORS_INIT \
+    --initialize-opacity "nerf"
 
   echo "[ray-sampling-end] - $(($(date +%s%N)/1000000))" >> time_logs.txt
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] [sampling-rays] finished"

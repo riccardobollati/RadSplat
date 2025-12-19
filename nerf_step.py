@@ -9,6 +9,7 @@ from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_samp
 from gs_initializer import Initializer, create_ray_bins_for_sampling
 from pathlib import Path
 import argparse
+from utils.nerf_step_utils import normalize_density_to_opacity
 
 warnings.filterwarnings(
     "ignore",
@@ -73,7 +74,7 @@ def create_parser():
             "-op",
             type=str,
             required=False,
-            help="strategy used to initialize opacity: none | nerf-n (where n is the number of points sampled to initialize the opacity)"
+            help="strategy used to initialize opacity: none | nerf (where n is the number of points sampled to initialize the opacity)"
             )
 
     parser.add_argument(
@@ -133,6 +134,7 @@ if __name__ == "__main__":
         img_loaded = dataset.get_numpy_image(0)
 
     xyzrgb_chunks = []
+    opacities_chunks = []
     for b in range(n_batches):
 
         # get initial and final index of the index rays to query
@@ -160,16 +162,24 @@ if __name__ == "__main__":
         logging.info('computer initial_position')
         initial_position, depths = gs_initializer.compute_inital_positions(trasmittance, 0.5)
 
-        print(depths)
+        if args.initialize_opacity == 'nerf':
 
-        if args.opacity_init == 'nerf':
-
-
-            sample_coords = create_ray_bins_for_sampling(depths, 5)
-            sample_opacity_points = model.sample_specific_points(gs_initializer.ray_samples, sample_coords)
-            densities, _ = model.get_density(sample_opacity_points)
-            print('####### densities')
-            print(densities)
+            batch_densities = model.get_density_at_points(initial_position)
+            batch_opacities = normalize_density_to_opacity(batch_densities)
+            # sample_coords = create_ray_bins_for_sampling(depths, 5)
+            # print('####### sample coords')
+            # print(sample_coords)
+            # sample_opacity_points = model.sample_specific_points(rays, sample_coords)
+            #
+            # print('####### frustum internals')
+            # print(sample_opacity_points.frustums.origins)
+            # print(sample_opacity_points.frustums.directions)
+            # print(sample_opacity_points.frustums.starts)
+            # print(sample_opacity_points.frustums.ends)
+            #
+            # densities, _ = model.get_density(sample_opacity_points)
+            # print('####### densities')
+            # print(densities)
 
         if args.colors_init == 'image':
             batch_colors = []
@@ -187,14 +197,17 @@ if __name__ == "__main__":
 
         xyzrgb_batch = torch.cat([initial_position, rgb_values], dim=-1)
         xyzrgb_chunks.append(xyzrgb_batch.detach().cpu())
+        opacities_chunks.append(batch_opacities.unsqueeze(-1).detach().cpu())
 
     xyzrgb = torch.cat(xyzrgb_chunks, dim=0)
+    opacities = torch.cat(opacities_chunks, dim=0)
 
     image_filenames_abs = [str(p) for p in dpo.image_filenames]
     image_filenames_rel = [rel_to_images_root(p) for p in image_filenames_abs]
 
     payload = {
         "xyzrgb": xyzrgb.cpu(),
+        "opacity" : opacities.cpu(),
         "camera_to_worlds": cams.camera_to_worlds.cpu(),
         "K": cams.get_intrinsics_matrices().cpu(),
         "image_filenames_abs": image_filenames_abs,

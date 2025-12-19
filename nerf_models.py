@@ -16,7 +16,7 @@ NS_ROOT = Path(__file__).parent / "submodules" / "nerfstudio"
 sys.path.insert(0, str(NS_ROOT))
 
 from nerfstudio.cameras.cameras import Cameras
-from nerfstudio.cameras.rays import RayBundle, RaySamples
+from nerfstudio.cameras.rays import RayBundle, RaySamples, Frustums
 from nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
 from nerfstudio.field_components.field_heads import FieldHeadNames
 from nerfstudio.utils.eval_utils import eval_setup
@@ -176,7 +176,7 @@ class Nerfacto:
         return ray_samples.to(self.device)
 
     def get_density(self, ray_samples : RaySamples) -> torch.Tensor:
-        densities, _  = self.model.get_density(ray_samples)
+        densities, embedding = self.model.field.get_density(ray_samples)
         return densities
 
     def evaluate_points(self, ray_samples : RaySamples):
@@ -211,4 +211,48 @@ class Nerfacto:
         }
 
         return outputs, field_outputs, weights
+
+    def get_density_at_points(self, points: torch.Tensor):
+        """
+        Computes density at specific 3D points using a trained Nerfacto model.
+        
+        Args:
+            config_path: Path to the config.yml file.
+            points: A tensor of shape (N, 3) containing the XYZ coordinates.
+        """
+        self.model.eval()
+
+        origins = points.unsqueeze(1) 
+        
+        directions = torch.zeros_like(origins)
+        directions[..., 2] = 1.0  # arbitrary direction
+
+        # Pixel area is required by the dataclass but not used for density queries
+        pixel_area = torch.ones((points.shape[0], 1, 1)).to(self.model.device)
+
+        frustums = Frustums(
+            origins=origins.to(self.model.device),
+            directions=directions.to(self.model.device),
+            starts=torch.zeros((points.shape[0], 1, 1)).to(self.model.device),
+            ends=torch.zeros((points.shape[0], 1, 1)).to(self.model.device),
+            pixel_area=pixel_area
+        )
+
+        ray_samples = RaySamples(
+            frustums=frustums,
+            camera_indices=torch.zeros((points.shape[0], 1, 1), dtype=torch.int32).to(self.model.device),
+            deltas=torch.ones((points.shape[0], 1, 1)).to(self.model.device), # arbitrary deltas
+            spacing_starts=frustums.starts,
+            spacing_ends=frustums.ends,
+        )
+
+        # 3. Compute Density
+        # Nerfacto usually uses a "Proposal Network" (density_fns) and a "NerfactoField".
+        # If you want the density from the final fine-level field:
+        with torch.no_grad():
+            # returns (density, feature_vectors)
+            density, _ = self.model.field.get_density(ray_samples)
+
+        return density.squeeze()
+
 
